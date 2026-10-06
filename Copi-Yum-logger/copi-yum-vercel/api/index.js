@@ -12,13 +12,17 @@ const json = (value, status = 200, headers = {}) => new Response(JSON.stringify(
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', ...headers }
 });
 function db() {
-  if (!process.env.DATABASE_URL) throw fail(503, 'Database is not configured.');
-  database ||= postgres(process.env.DATABASE_URL, { max: 1, prepare: false, ssl: 'require' });
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URI;
+  if (!url) throw fail(503, 'Database is not configured.');
+  database ||= postgres(url, { max: 1, prepare: false, ssl: 'require' });
   return database;
 }
 function auth() {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) throw fail(503, 'Staff email sign-in is not configured.');
-  authClient ||= createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) throw fail(503, 'Staff email sign-in is not configured.');
+  authClient ||= createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
   });
   return authClient;
@@ -53,7 +57,7 @@ function sessionToken(request) {
 }
 async function staffFromRequest(request) {
   const token = sessionToken(request);
-  if (!token) throw fail(401, 'Staff sign-in required. Enter the code sent to your email.');
+  if (!token) throw fail(401, 'Staff sign-in required. Open the link sent to your email.');
   const { data, error } = await auth().auth.getUser(token);
   if (error || !data.user?.email) throw fail(401, 'Staff sign-in expired. Please sign in again.');
   const email = data.user.email.toLowerCase();
@@ -98,19 +102,20 @@ async function handleAuth(request, path) {
   if (request.method === 'POST' && path === '/api/auth/start') {
     const email = required((await body(request)).email, 'Email', 254).toLowerCase();
     if (!staffMap().has(email)) throw fail(403, 'This email is not listed as staff.');
-    const { error } = await auth().auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    const emailRedirectTo = `${new URL(request.url).origin}/staff/`;
+    const { error } = await auth().auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo } });
     if (error) throw fail(400, error.message);
-    return json({ message: 'Email code sent. Check your inbox.' });
+    return json({ message: 'Sign-in link sent. Check your inbox.' });
   }
-  if (request.method === 'POST' && path === '/api/auth/verify') {
+  if (request.method === 'POST' && path === '/api/auth/session') {
     const input = await body(request);
-    const email = required(input.email, 'Email', 254).toLowerCase();
-    const token = required(input.token, 'Email code', 20);
+    const token = required(input.accessToken, 'Sign-in token', 4096);
+    const { data, error } = await auth().auth.getUser(token);
+    if (error || !data.user?.email) throw fail(401, 'Invalid or expired sign-in link. Please request a new one.');
+    const email = data.user.email.toLowerCase();
     if (!staffMap().has(email)) throw fail(403, 'This email is not listed as staff.');
-    const { data, error } = await auth().auth.verifyOtp({ email, token, type: 'email' });
-    if (error || !data.session?.access_token || data.user?.email?.toLowerCase() !== email) throw fail(401, 'Invalid or expired email code.');
     return json({ staff: { name: staffMap().get(email), email } }, 200, {
-      'Set-Cookie': `cy_staff=${data.session.access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.min(data.session.expires_in || 3600, 3600)}`
+      'Set-Cookie': `cy_staff=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`
     });
   }
   if (request.method === 'POST' && path === '/api/auth/logout') return json({ message: 'Signed out.' }, 200, {

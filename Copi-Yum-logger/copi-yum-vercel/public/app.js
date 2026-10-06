@@ -234,10 +234,19 @@ async function init() {
   setView(staffView);
   await loadCard();
   if (state.cloud && staffView) {
+    let signInError = '';
+    const fragment = new URLSearchParams(location.hash.slice(1));
+    if (fragment.has('access_token') || fragment.has('error_description')) {
+      history.replaceState(null, '', location.pathname + location.search);
+      try {
+        if (fragment.has('access_token')) await post('/api/auth/session', { accessToken: fragment.get('access_token') });
+        else signInError = fragment.get('error_description') || 'Sign-in failed.';
+      } catch (error) { signInError = error.message; }
+    }
     try {
       const { staff } = await api('/staff/api/config');
       showStaffDashboard(staff);
-    } catch { showStaffLogin(); }
+    } catch { showStaffLogin(signInError); }
   } else {
     $('#staff-name').innerHTML = '<option value="">Choose staff</option>' + (config.staffNames || []).map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
     $('#staff-name').value = state.staff;
@@ -250,21 +259,7 @@ async function init() {
     try {
       const email = $('#staff-email').value.trim().toLowerCase();
       await post('/api/auth/start', { email });
-      show($('#code-form'), true);
-      toast($('#login-result'), 'Email code sent. Check your inbox.');
-      $('#staff-code').focus();
-    } catch (error) { toast($('#login-result'), error.message, true); }
-    finally { button.disabled = false; }
-  });
-  $('#code-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const button = event.currentTarget.querySelector('button');
-    button.disabled = true;
-    try {
-      await post('/api/auth/verify', { email: $('#staff-email').value.trim().toLowerCase(), token: $('#staff-code').value.trim() });
-      const { staff } = await api('/staff/api/config');
-      showStaffDashboard(staff);
-      $('#staff-code').value = '';
+      toast($('#login-result'), 'Sign-in link sent. Tap Sign in in your email.');
     } catch (error) { toast($('#login-result'), error.message, true); }
     finally { button.disabled = false; }
   });
