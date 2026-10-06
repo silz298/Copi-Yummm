@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f8f1e7">
+  <title>Copi-Yum • Coffee card</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/scan.css">
+  <script src="/zxing-browser.min.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Copi-Yum home"><span class="brand-mark">☕</span><span>copi<span class="brand-accent">yum</span><small>coffee rewards</small></span></a>
+      <button id="role-switch" class="role-switch" type="button">Staff view <span aria-hidden="true">↗</span></button>
+    </header>
+
+    <main>
+      <section id="customer-view" class="view">
+        <div id="welcome" class="welcome">
+          <div class="eyebrow">YOUR DAILY COFFEE, A LITTLE SWEETER</div>
+          <h1>Good coffee.<br><em>Good perks.</em></h1>
+          <p class="lead">Collect 5 stamps from paid coffees and your next coffee is on us.</p>
+          <div class="cup-art" aria-hidden="true"><div class="cup-steam">〰 &nbsp; 〰</div><div class="cup">☕</div><span class="art-star star-one">✳</span><span class="art-star star-two">✦</span></div>
+          <form id="create-card-form" class="form-card">
+            <label for="customer-name">What should we call you?</label>
+            <div class="input-row"><input id="customer-name" name="name" maxlength="50" placeholder="Your first name" autocomplete="given-name" required><button class="button primary" type="submit">Get my card <span aria-hidden="true">→</span></button></div>
+            <p class="fine-print">No password. Save your card link so you can open it again.</p>
+          </form>
+        </div>
+
+        <div id="card-area" class="hidden">
+          <div class="eyebrow">YOUR COPI-YUM CARD</div>
+          <div class="card-heading"><div><h1>Hi, <span id="card-name"></span><span class="wave"> ✳</span></h1><p>Every coffee brings you closer.</p></div><span class="mini-cup" aria-hidden="true">☕</span></div>
+          <div class="loyalty-card">
+            <div class="loyalty-card-top"><span>COPI-YUM CLUB</span><span class="card-icon">✷</span></div>
+            <div class="loyalty-card-title">Coffee tastes better<br><em>with a little reward.</em></div>
+            <div id="stamp-grid" class="stamp-grid" aria-label="Stamp progress"></div>
+            <div class="loyalty-card-bottom"><span><strong id="stamp-count">0</strong> / 5 stamps</span><span>BUY 5, GET 1 FREE</span></div>
+          </div>
+          <div id="reward-banner" class="reward-banner hidden"><span class="reward-icon">✦</span><div><strong>Free coffee unlocked!</strong><small>Ask staff to redeem it for you.</small></div><span aria-hidden="true">→</span></div>
+          <button id="show-qr" class="button primary full" type="button"><span class="button-icon">▦</span> Show my QR to staff <span aria-hidden="true">→</span></button>
+          <div id="ticket-area" class="ticket-area hidden" aria-live="polite">
+            <div class="ticket-head"><strong>Scan at the counter</strong><span id="ticket-timer" class="timer"></span></div>
+            <div class="qr-frame"><img id="qr-image" alt="Your one-time coffee QR code"></div>
+            <div class="short-code">Code: <strong id="short-code"></strong></div>
+            <p id="ticket-status" class="ticket-status">Ready for staff to scan. One scan = one stamp.</p>
+            <button id="refresh-qr" class="text-button hidden" type="button">Make a new QR</button>
+          </div>
+          <div class="info-strip"><span aria-hidden="true">◎</span><p>Each QR works once and expires after 2 minutes. Make a fresh one for your next purchase.</p></div>
+          <div class="section-heading"><h2>Recent activity</h2><button id="copy-link" class="text-button" type="button">Copy my card link</button></div>
+          <div id="card-history" class="history-list"></div>
+        </div>
+      </section>
+
+      <section id="staff-view" class="view hidden">
+        <div class="eyebrow">THE COUNTER</div>
+        <div class="card-heading"><div><h1>Staff dashboard<span class="wave"> ✳</span></h1><p>Quick, simple, and ready for the rush.</p></div><span class="mini-cup" aria-hidden="true">✷</span></div>
+        <div id="staff-login" class="staff-panel hidden">
+          <h2>Sign in by email code</h2>
+          <p>Enter the email address approved for staff. No new password needed.</p>
+          <form id="email-form" class="entry-form"><label for="staff-email">Staff email <input id="staff-email" type="email" autocomplete="email" required></label><button class="button primary full" type="submit">Send email code</button></form>
+          <form id="code-form" class="entry-form hidden"><label for="staff-code">Code from your email <input id="staff-code" inputmode="numeric" autocomplete="one-time-code" required></label><button class="button dark full" type="submit">Sign in</button></form>
+          <div id="login-result" class="entry-result hidden" role="status"></div>
+        </div>
+        <div id="staff-dashboard" class="hidden">
+        <div class="staff-identity"><label for="staff-name">Using as</label><select id="staff-name"></select><span class="identity-note">Username only</span></div>
+        <button id="staff-signout" class="text-button hidden" type="button">Sign out</button>
+        <nav class="staff-tabs" aria-label="Staff pages"><button type="button" class="active" data-tab="scan">Scan</button><button type="button" data-tab="ledger">Today's log</button><button type="button" data-tab="entry">Add entry</button></nav>
+        <div id="scan-panel" class="staff-panel">
+          <div class="panel-title"><div><h2>Scan a coffee QR</h2><p>After the customer pays, point your camera at their card.</p></div><span aria-hidden="true">▦</span></div>
+          <label class="scan-action-label" for="scan-action">What is this scan for? <select id="scan-action"><option value="stamp">Add a paid-coffee stamp</option><option value="reward">Redeem a free coffee</option></select></label>
+          <div id="scan-sale-fields" class="sale-fields"><label for="scan-item">Item <input id="scan-item" value="Coffee" maxlength="80"></label><label for="scan-amount">Price paid (PHP, optional) <input id="scan-amount" type="number" min="0" max="1000000" step="0.01" inputmode="decimal" placeholder="0.00"></label></div>
+          <button id="start-scan" class="button primary full" type="button">Open camera to scan</button>
+          <div id="camera-area" class="camera-area hidden"><video id="scan-video" playsinline muted></video><div class="scan-corners" aria-hidden="true"></div><button id="stop-scan" class="button light" type="button">Stop camera</button></div>
+          <div class="or-divider"><span>or</span></div>
+          <label class="photo-upload" for="scan-photo">Take or upload a QR photo <span aria-hidden="true">↗</span></label><input id="scan-photo" type="file" accept="image/*" capture="environment" class="visually-hidden">
+          <form id="manual-form" class="manual-form"><label for="manual-code">Enter the 10-character code</label><div class="input-row"><input id="manual-code" maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="A1B2C3D4E5"><button id="manual-submit" type="submit" class="button dark">Add stamp</button></div></form>
+          <div id="scan-result" class="scan-result hidden" role="status" aria-live="polite"></div>
+        </div>
+        <div id="ledger-panel" class="staff-panel hidden"><div class="panel-title"><div><h2>Today's log</h2><p>Sales and expenses in Manila time.</p></div><span aria-hidden="true">◷</span></div><div class="totals"><div><small>SALES</small><strong id="today-sales">₱0.00</strong></div><div><small>EXPENSES</small><strong id="today-expenses">₱0.00</strong></div></div><div id="ledger-list" class="history-list"></div><div class="export-row"><a href="/api/export?kind=sales" download>Sales CSV</a><a href="/api/export?kind=expenses" download>Expenses CSV</a><a href="/api/export?kind=loyalty_events" download>Stamps CSV</a></div></div>
+        <div id="entry-panel" class="staff-panel hidden"><div class="panel-title"><div><h2>Add an entry</h2><p>Keep your daily records together.</p></div><span aria-hidden="true">＋</span></div><div class="entry-toggle"><button type="button" class="active" data-entry="sale">Sale</button><button type="button" data-entry="expense">Expense / restock</button></div><form id="entry-form" class="entry-form"><label for="entry-item">Item <input id="entry-item" maxlength="80" required placeholder="e.g. Iced coffee"></label><label id="category-field" class="hidden" for="entry-category">Category <input id="entry-category" maxlength="50" placeholder="e.g. Supplies"></label><label for="entry-amount">Amount (PHP) <input id="entry-amount" type="number" min="0" max="1000000" step="0.01" inputmode="decimal" required placeholder="0.00"></label><label id="note-field" class="hidden" for="entry-note">Note <input id="entry-note" maxlength="200" placeholder="Optional"></label><button class="button primary full" type="submit">Save entry</button></form><div id="entry-result" class="entry-result hidden" role="status"></div></div>
+        <p class="staff-caution">Staff names are for the log only. Anyone who can open this website can choose a name and edit records. Use it only on a trusted private network.</p>
+        </div>
+      </section>
+    </main>
+    <footer><span>Made for good coffee days.</span><span>Copi-Yum ✳</span></footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/staff/api/:path*", "destination": "/api/index?staff=1&path=:path*" },
+    { "source": "/api/:path*", "destination": "/api/index?path=:path*" },
+    { "source": "/staff", "destination": "/index.html" },
+    { "source": "/staff/", "destination": "/index.html" }
+  ]
+}

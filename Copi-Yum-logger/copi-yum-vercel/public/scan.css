@@ -1,0 +1,4 @@
+.scan-action-label { display: block; margin: 0 0 16px; font-size: 13px; font-weight: 700; }
+.scan-action-label select { display: block; width: 100%; height: 50px; margin-top: 8px; padding: 0 15px; color: #29372d; background: #fff; border: 1px solid #d9ded3; border-radius: 12px; font: inherit; }
+.scan-action-label select:focus { border-color: #7a977f; outline: none; box-shadow: 0 0 0 3px #b4cfac60; }
+.staff-caution { margin: 17px 4px 0; color: #8b6b48; font-size: 11px; line-height: 1.5; }
